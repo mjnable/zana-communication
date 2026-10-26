@@ -48,7 +48,7 @@ final class CommunicationServiceProvider extends ServiceProvider
                     array_map(Address::from(...), $allowed),
                     $replyTo === null || $replyTo === '' ? null : Address::from($replyTo),
                 );
-            })
+            })->uses(ConfigurationInterface::class)
             ->singleton(MailRecorder::class)
             ->singleton(MailerInterface::class, static function (ServiceResolverInterface $r): MailerInterface {
                 $dsn = $r->get(ConfigurationInterface::class)->string('mail.dsn', self::MEMORY_DSN);
@@ -63,7 +63,7 @@ final class CommunicationServiceProvider extends ServiceProvider
                 }
 
                 return new Mailer($rules, Transport::fromDsn($dsn));
-            })
+            })->uses(ConfigurationInterface::class, MailRules::class, MailRecorder::class)
             ->trySingleton(SubscriberStoreInterface::class, static function (ServiceResolverInterface $r): SubscriberStoreInterface {
                 if (!interface_exists(ConnectionInterface::class) || !$r->has(ConnectionInterface::class)) {
                     throw new MailException('The newsletter needs a ' . SubscriberStoreInterface::class . ', or mj-zana/database for DatabaseSubscriberStore.');
@@ -72,7 +72,7 @@ final class CommunicationServiceProvider extends ServiceProvider
                 assert($connection instanceof ConnectionInterface);
 
                 return new DatabaseSubscriberStore($connection, $r->get(ConfigurationInterface::class)->string('mail.newsletter.table', 'newsletter_subscribers'));
-            })
+            })->uses(ConnectionInterface::class, ConfigurationInterface::class)
             ->singleton(Newsletter::class, static function (ServiceResolverInterface $r): Newsletter {
                 $config = $r->get(ConfigurationInterface::class);
                 $secret = $config->has('mail.newsletter.secret') ? $config->string('mail.newsletter.secret') : $config->string('security.secret', '');
@@ -81,7 +81,7 @@ final class CommunicationServiceProvider extends ServiceProvider
                 assert($store instanceof SubscriberStoreInterface && $mailer instanceof MailerInterface);
 
                 return new Newsletter($store, $mailer, $secret, $config->int('mail.newsletter.confirmation_lifetime', 604800));
-            });
+            })->uses(ConfigurationInterface::class, SubscriberStoreInterface::class, MailerInterface::class);
     }
 
     public function origin(): string

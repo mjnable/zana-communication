@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Zana\Communication;
 
 use Symfony\Component\Mailer\Transport;
+use Zana\Communication\Newsletter\DatabaseSubscriberStore;
+use Zana\Communication\Newsletter\Newsletter;
+use Zana\Communication\Newsletter\SubscriberStoreInterface;
+use Zana\Database\ConnectionInterface;
 use Zana\Configuration\ConfigurationInterface;
 use Zana\Container\Contracts\ServiceCollectionInterface;
 use Zana\Container\Contracts\ServiceResolverInterface;
@@ -59,6 +63,24 @@ final class CommunicationServiceProvider extends ServiceProvider
                 }
 
                 return new Mailer($rules, Transport::fromDsn($dsn));
+            })
+            ->trySingleton(SubscriberStoreInterface::class, static function (ServiceResolverInterface $r): SubscriberStoreInterface {
+                if (!interface_exists(ConnectionInterface::class) || !$r->has(ConnectionInterface::class)) {
+                    throw new MailException('The newsletter needs a ' . SubscriberStoreInterface::class . ', or mj-zana/database for DatabaseSubscriberStore.');
+                }
+                $connection = $r->get(ConnectionInterface::class);
+                assert($connection instanceof ConnectionInterface);
+
+                return new DatabaseSubscriberStore($connection, $r->get(ConfigurationInterface::class)->string('mail.newsletter.table', 'newsletter_subscribers'));
+            })
+            ->singleton(Newsletter::class, static function (ServiceResolverInterface $r): Newsletter {
+                $config = $r->get(ConfigurationInterface::class);
+                $secret = $config->has('mail.newsletter.secret') ? $config->string('mail.newsletter.secret') : $config->string('security.secret', '');
+                $store = $r->get(SubscriberStoreInterface::class);
+                $mailer = $r->get(MailerInterface::class);
+                assert($store instanceof SubscriberStoreInterface && $mailer instanceof MailerInterface);
+
+                return new Newsletter($store, $mailer, $secret, $config->int('mail.newsletter.confirmation_lifetime', 604800));
             });
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zana\Communication;
 
 use Symfony\Component\Mailer\Transport;
+use Zana\Communication\Console\MailTestCommand;
 use Zana\Communication\Newsletter\DatabaseSubscriberStore;
 use Zana\Communication\Newsletter\Newsletter;
 use Zana\Communication\Newsletter\SubscriberStoreInterface;
@@ -12,6 +13,8 @@ use Zana\Database\ConnectionInterface;
 use Zana\Configuration\ConfigurationInterface;
 use Zana\Container\Contracts\ServiceCollectionInterface;
 use Zana\Container\Contracts\ServiceResolverInterface;
+use Zana\Console\ConsoleKernel;
+use Zana\Core\Deployment\DeploymentCheck;
 use Zana\Core\ServiceProvider;
 
 /**
@@ -23,6 +26,9 @@ use Zana\Core\ServiceProvider;
  * - mail.from (required to send): an address, or ['address' => ..., 'name' => ...];
  * - mail.allowed_from: other addresses the application may send from;
  * - mail.reply_to: the default Reply-To.
+ *
+ * Also a deployment check that production sends email, and the mail:test
+ * command when mj-zana/console is installed.
  */
 final class CommunicationServiceProvider extends ServiceProvider
 {
@@ -81,7 +87,13 @@ final class CommunicationServiceProvider extends ServiceProvider
                 assert($store instanceof SubscriberStoreInterface && $mailer instanceof MailerInterface);
 
                 return new Newsletter($store, $mailer, $secret, $config->int('mail.newsletter.confirmation_lifetime', 604800));
-            })->uses(ConfigurationInterface::class, SubscriberStoreInterface::class, MailerInterface::class);
+            })->uses(ConfigurationInterface::class, SubscriberStoreInterface::class, MailerInterface::class)
+            ->singleton(MailDsnCheck::class)
+            ->tag(DeploymentCheck::TAG, MailDsnCheck::class);
+
+        if (class_exists(ConsoleKernel::class)) {
+            $services->singleton(MailTestCommand::class)->tag(ConsoleKernel::TAG, MailTestCommand::class);
+        }
     }
 
     public function origin(): string

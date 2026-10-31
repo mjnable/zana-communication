@@ -3,6 +3,15 @@
 All Zana packages share one version number and are released together. A release that did
 not change this package is not listed.
 
+## 2.6.0 — unreleased
+
+### Added
+
+- `mail:test <email>`, registered when `mj-zana/console` is installed: sends a test message and prints
+  the mail server's conversation, with the DSN password masked and the login lines hidden (FE-43).
+- `MailDsnCheck`: a deployment check that warns when production sends no email (`memory://` or
+  `null://`).
+- `Mailer::deliver()` returns the transport's transcript.
 ## 2.4.0 — 2026-10-26
 
 ### Changed

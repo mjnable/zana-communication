@@ -22,10 +22,22 @@ final readonly class Mailer implements MailerInterface
 
     public function send(Message $message): void
     {
+        $this->deliver($message);
+    }
+
+    /**
+     * Send, and return the transport's transcript (the SMTP conversation for
+     * smtp://), for mail:test. On failure, the MailException's previous
+     * exception is the transport's, whose getDebug() holds the transcript.
+     *
+     * @throws MailException
+     */
+    public function deliver(Message $message): string
+    {
         $email = self::toEmail($this->rules->apply($message));
 
         try {
-            $this->transport->send($email);
+            return $this->transport->send($email)?->getDebug() ?? '';
         } catch (TransportExceptionInterface $e) {
             throw new MailException("The message \"{$message->subject}\" could not be sent: {$e->getMessage()}", previous: $e);
         }

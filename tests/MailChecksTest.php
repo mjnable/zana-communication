@@ -36,6 +36,7 @@ final class MailChecksTest extends TestCase
 
         $this->assertSame(CheckStatus::Warning, $check->check($this->app('production', []))->status, 'unset: memory://');
         $this->assertStringContainsString('mail.dsn is memory:// in production: no email is sent.', $check->check($this->app('production', []))->message);
+        $this->assertStringEndsWith('try it with the console command `mail:test you@example.com`.', $check->check($this->app('production', []))->message, 'no script is named outside the console (FE-54)');
         $this->assertSame(CheckStatus::Warning, $check->check($this->app('production', ['mail.dsn' => 'null://null']))->status);
         $this->assertSame(CheckStatus::Ok, $check->check($this->app('production', ['mail.dsn' => 'smtp://mail.example.com:587']))->status);
         $this->assertSame(CheckStatus::Ok, $check->check($this->app('development', []))->status, 'tests and development record mail on purpose');

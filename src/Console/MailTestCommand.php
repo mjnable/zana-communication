@@ -17,6 +17,7 @@ use Zana\Communication\MailerInterface;
 use Zana\Communication\Message;
 use Zana\Configuration\ConfigurationInterface;
 use Zana\Console\Command;
+use Zana\Core\ConsoleScript;
 
 /**
  * php bin/console mail:test someone@example.com
@@ -49,7 +50,7 @@ final class MailTestCommand extends Command
         $message = Message::create()
             ->to((string) $input->getArgument('to'))
             ->subject('Zana mail test')
-            ->text("This message tests the mail settings of {$config->string('app.url', 'the application')}.\n\nIt was sent by: php bin/console mail:test");
+            ->text("This message tests the mail settings of {$config->string('app.url', 'the application')}.\n\nIt was sent by " . ConsoleScript::command('mail:test') . '.');
 
         try {
             $transcript = $mailer->deliver($message);
